@@ -1,42 +1,8 @@
-import type { Package, PackageStatus } from "@/lib/types";
-
-import { Chip } from "@heroui/react";
+import type { Package } from "@/lib/types";
 
 import { CameraIcon } from "@/components/icons";
-
-function StatusChip({ status }: { status: PackageStatus }) {
-  const className = "w-full justify-center uppercase tracking-wide";
-
-  if (status === "PENDING") {
-    return (
-      <Chip className={className} color="warning" size="sm" variant="soft">
-        Pending
-      </Chip>
-    );
-  }
-  if (status === "DELIVERED") {
-    return (
-      <Chip className={className} color="accent" size="sm" variant="soft">
-        Delivered
-      </Chip>
-    );
-  }
-
-  return (
-    <Chip className={className} color="success" size="sm" variant="soft">
-      Confirmed
-    </Chip>
-  );
-}
-
-function formatDate(dateString: string | null) {
-  if (!dateString) return "—";
-
-  return new Date(dateString).toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
+import { StatusChip } from "@/components/StatusChip";
+import { formatDate } from "@/lib/utils";
 
 type PackageCardProps = {
   pkg: Package;
