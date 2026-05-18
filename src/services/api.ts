@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const getHeaders = () => ({
   "Content-Type": "application/json",
@@ -11,6 +11,7 @@ export const loginRequest = async (email: string, password: string) => {
     headers: getHeaders(),
     body: JSON.stringify({ email, password }),
   });
+
   return res.json();
 };
 
@@ -19,6 +20,7 @@ export const logoutRequest = async () => {
     method: "POST",
     credentials: "include",
   });
+
   return res.json();
 };
 
@@ -27,6 +29,7 @@ export const getUsersRequest = async () => {
     credentials: "include",
     headers: getHeaders(),
   });
+
   return res.json();
 };
 
@@ -35,6 +38,7 @@ export const getResidentsRequest = async () => {
     credentials: "include",
     headers: getHeaders(),
   });
+
   return res.json();
 };
 
@@ -45,6 +49,7 @@ export const createUserRequest = async (data: object) => {
     headers: getHeaders(),
     body: JSON.stringify(data),
   });
+
   return res.json();
 };
 
@@ -54,6 +59,7 @@ export const deleteUserRequest = async (id: string) => {
     credentials: "include",
     headers: getHeaders(),
   });
+
   return res.json();
 };
 
@@ -62,6 +68,7 @@ export const getPackagesRequest = async () => {
     credentials: "include",
     headers: getHeaders(),
   });
+
   return res.json();
 };
 
@@ -70,6 +77,7 @@ export const getMyPackagesRequest = async () => {
     credentials: "include",
     headers: getHeaders(),
   });
+
   return res.json();
 };
 
@@ -78,6 +86,7 @@ export const getLoggedPackagesRequest = async () => {
     credentials: "include",
     headers: getHeaders(),
   });
+
   return res.json();
 };
 
@@ -88,6 +97,7 @@ export const createPackageRequest = async (data: object) => {
     headers: getHeaders(),
     body: JSON.stringify(data),
   });
+
   return res.json();
 };
 
@@ -97,6 +107,7 @@ export const deliverPackageRequest = async (id: string) => {
     credentials: "include",
     headers: getHeaders(),
   });
+
   return res.json();
 };
 
@@ -106,5 +117,6 @@ export const confirmPackageRequest = async (id: string) => {
     credentials: "include",
     headers: getHeaders(),
   });
+
   return res.json();
 };
