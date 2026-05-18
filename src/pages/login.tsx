@@ -36,14 +36,8 @@ export default function LoginPage() {
     try {
       const data = await loginRequest(email, password);
 
-      if (data.token) {
-        const payload = JSON.parse(atob(data.token.split(".")[1]));
-
-        login(data.token, {
-          id: payload.id,
-          email: payload.email,
-          role: payload.role,
-        });
+      if (data.user) {
+        login(data.user);
         navigate("/dashboard");
       } else {
         setServerError(data.error || "Invalid credentials");

@@ -4,6 +4,7 @@ import { Button, Chip } from "@heroui/react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { SunIcon, MoonIcon } from "../components/icons";
+import { logoutRequest } from "../services/api";
 
 function getNavLinks(role: string) {
   if (role === "ADMIN") {
@@ -36,7 +37,8 @@ export default function AppLayout() {
   const logoSrc = isDark ? "/icon-lobbylog-dark.png" : "/icon-lobbylog.png";
   const navLinks = getNavLinks(user?.role ?? "");
 
-  function handleLogout() {
+  async function handleLogout() {
+    await logoutRequest();
     logout();
     navigate("/login");
   }
