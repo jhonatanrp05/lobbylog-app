@@ -66,7 +66,7 @@ export const getMyPackagesRequest = async (token: string) => {
 };
 
 export const getLoggedPackagesRequest = async (token: string) => {
-  const res = await fetch(`${API_URL}/packages/logged`, {
+  const res = await fetch(`${API_URL}/packages/my-logged`, {
     headers: getHeaders(token),
   });
 
