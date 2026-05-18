@@ -61,14 +61,14 @@ export default function AppLayout() {
             </span>
           </div>
 
-          <nav className="hidden items-center gap-6 sm:flex">
+          <nav className="hidden items-center gap-2 sm:flex">
             {navLinks.map((link) => (
               <NavLink
                 key={link.to}
                 className={({ isActive }) =>
                   isActive
-                    ? "text-sm font-semibold text-accent"
-                    : "text-sm text-muted hover:text-foreground"
+                    ? "rounded-full border border-accent bg-accent/10 px-4 py-1.5 text-sm font-semibold text-accent"
+                    : "rounded-full border border-border px-4 py-1.5 text-sm text-muted hover:border-foreground hover:text-foreground"
                 }
                 to={link.to}
               >
@@ -100,14 +100,14 @@ export default function AppLayout() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 border-t border-border px-4 py-2 sm:hidden">
+        <div className="flex items-center gap-2 border-t border-border px-4 py-2 sm:hidden">
           {navLinks.map((link) => (
             <NavLink
               key={link.to}
               className={({ isActive }) =>
                 isActive
-                  ? "text-sm font-semibold text-accent"
-                  : "text-sm text-muted hover:text-foreground"
+                  ? "rounded-full border border-accent bg-accent/10 px-4 py-1.5 text-sm font-semibold text-accent"
+                  : "rounded-full border border-border px-4 py-1.5 text-sm text-muted hover:border-foreground hover:text-foreground"
               }
               to={link.to}
             >
