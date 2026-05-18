@@ -6,8 +6,8 @@ import { Button, Skeleton, Table, Toast, useOverlayState } from "@heroui/react";
 import { RoleChip } from "./components/RoleChip";
 import { CredentialsBanner } from "./components/CredentialsBanner";
 import { CreateUserModal } from "./components/CreateUserModal";
-import { DeleteUserModal } from "./components/DeleteUserModal";
 
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { getUsersRequest, deleteUserRequest } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -139,9 +139,16 @@ export default function UsersPage() {
         }}
       />
 
-      <DeleteUserModal
+      <ConfirmModal
+        message={
+          <>
+            Are you sure you want to delete{" "}
+            <span className="font-semibold">{userToDelete?.name}</span>? This
+            action cannot be undone.
+          </>
+        }
         state={deleteModalState}
-        user={userToDelete}
+        title="Delete user"
         onConfirm={handleDelete}
       />
     </div>

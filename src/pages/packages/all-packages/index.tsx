@@ -3,8 +3,7 @@ import type { AdminPackage } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Button, Skeleton, Table, Toast, useOverlayState } from "@heroui/react";
 
-import { DeletePackageModal } from "./components/DeletePackageModal";
-
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { StatusChip } from "@/components/StatusChip";
 import { formatDate } from "@/lib/utils";
 import { getPackagesRequest, deletePackageRequest } from "@/services/api";
@@ -122,9 +121,16 @@ export default function AllPackagesPage() {
         </Table>
       )}
 
-      <DeletePackageModal
-        pkg={packageToDelete}
+      <ConfirmModal
+        message={
+          <>
+            Are you sure you want to delete the package{" "}
+            <span className="font-semibold">{packageToDelete?.description}</span>
+            ? This action cannot be undone.
+          </>
+        }
         state={deleteModalState}
+        title="Delete package"
         onConfirm={handleDelete}
       />
     </div>

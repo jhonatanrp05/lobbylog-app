@@ -1,18 +1,20 @@
-import type { User } from "@/lib/types";
-
 import { Button, Modal } from "@heroui/react";
 
-type DeleteUserModalProps = {
+type ConfirmModalProps = {
   state: { isOpen: boolean; open: () => void; close: () => void };
-  user: User | null;
+  title: string;
+  message: React.ReactNode;
+  confirmLabel?: string;
   onConfirm: () => void;
 };
 
-export function DeleteUserModal({
+export function ConfirmModal({
   state,
-  user,
+  title,
+  message,
+  confirmLabel = "Delete",
   onConfirm,
-}: DeleteUserModalProps) {
+}: ConfirmModalProps) {
   const modalState = {
     ...state,
     setOpen: (isOpen: boolean) => {
@@ -31,21 +33,17 @@ export function DeleteUserModal({
         <Modal.Container size="sm">
           <Modal.Dialog>
             <Modal.Header>
-              <Modal.Heading>Delete user</Modal.Heading>
+              <Modal.Heading>{title}</Modal.Heading>
             </Modal.Header>
             <Modal.Body>
-              <p className="text-foreground">
-                Are you sure you want to delete{" "}
-                <span className="font-semibold">{user?.name}</span>? This action
-                cannot be undone.
-              </p>
+              <div className="text-foreground">{message}</div>
             </Modal.Body>
             <Modal.Footer>
               <Button variant="outline" onPress={state.close}>
                 Cancel
               </Button>
               <Button variant="danger" onPress={onConfirm}>
-                Delete
+                {confirmLabel}
               </Button>
             </Modal.Footer>
           </Modal.Dialog>
