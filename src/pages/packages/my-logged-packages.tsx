@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button, Chip, Spinner, Table } from "@heroui/react";
+import { Button, Chip, Skeleton, Table } from "@heroui/react";
 
 import {
   getLoggedPackagesRequest,
@@ -81,28 +81,32 @@ export default function MyLoggedPackagesPage() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner />
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold text-foreground">My Logged Packages</h1>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      {packages.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex gap-3">
+              <Skeleton className="h-10 flex-[2] rounded-lg" />
+              <Skeleton className="h-10 w-20 rounded-lg" />
+              <Skeleton className="h-10 flex-1 rounded-lg" />
+              <Skeleton className="h-10 flex-1 rounded-lg" />
+              <Skeleton className="h-10 w-28 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      ) : packages.length === 0 ? (
         <p className="text-muted">You have not logged any packages yet.</p>
       ) : (
         <Table>
-          <Table.ScrollContainer className="min-w-[600px]">
-            <Table.Content aria-label="My logged packages">
+          <Table.ScrollContainer className="overflow-x-auto">
+            <Table.Content aria-label="My logged packages" className="min-w-[600px]">
               <Table.Header>
-                <Table.Column>Description</Table.Column>
+                <Table.Column isRowHeader>Description</Table.Column>
                 <Table.Column>Status</Table.Column>
                 <Table.Column>Logged on</Table.Column>
                 <Table.Column>Delivered on</Table.Column>
