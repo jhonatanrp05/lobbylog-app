@@ -4,10 +4,10 @@ import LoginPage from "./pages/login";
 import Dashboard from "./pages/dashboard";
 import AppLayout from "./layouts/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import AllPackagesPage from "./pages/packages/all";
-import LogPackagePage from "./pages/packages/log";
-import MyLoggedPage from "./pages/packages/my-logged";
-import MyPackagesPage from "./pages/packages/my";
+import AllPackagesPage from "./pages/packages/all-packages";
+import LogPackagePage from "./pages/packages/log-package";
+import MyLoggedPackagesPage from "./pages/packages/my-logged-packages";
+import MyPackagesPage from "./pages/packages/my-packages";
 import UsersPage from "./pages/users/index";
 
 function App() {
@@ -21,7 +21,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/packages" element={<AllPackagesPage />} />
           <Route path="/packages/log" element={<LogPackagePage />} />
-          <Route path="/packages/my-logged" element={<MyLoggedPage />} />
+          <Route path="/packages/my-logged" element={<MyLoggedPackagesPage />} />
           <Route path="/packages/my" element={<MyPackagesPage />} />
           <Route path="/users" element={<UsersPage />} />
         </Route>
