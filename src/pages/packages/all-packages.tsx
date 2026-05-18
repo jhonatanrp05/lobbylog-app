@@ -1,27 +1,31 @@
+import type { PackageStatus, AdminPackage as Package } from "@/lib/types";
+
 import { useState, useEffect } from "react";
 import { Chip, Skeleton, Table } from "@heroui/react";
 
-import { getPackagesRequest } from "../../services/api";
-
-type PackageStatus = "PENDING" | "DELIVERED" | "CONFIRMED";
-
-type Package = {
-  id: string;
-  description: string;
-  status: PackageStatus;
-  createdAt: string;
-  recipient: { name: string; unit: string | null };
-  porter: { name: string };
-};
+import { getPackagesRequest } from "@/services/api";
 
 function StatusChip({ status }: { status: PackageStatus }) {
   if (status === "PENDING") {
-    return <Chip color="warning" size="sm" variant="soft">Pending</Chip>;
+    return (
+      <Chip color="warning" size="sm" variant="soft">
+        Pending
+      </Chip>
+    );
   }
   if (status === "DELIVERED") {
-    return <Chip color="accent" size="sm" variant="soft">Delivered</Chip>;
+    return (
+      <Chip color="accent" size="sm" variant="soft">
+        Delivered
+      </Chip>
+    );
   }
-  return <Chip color="success" size="sm" variant="soft">Confirmed</Chip>;
+
+  return (
+    <Chip color="success" size="sm" variant="soft">
+      Confirmed
+    </Chip>
+  );
 }
 
 function formatDate(dateString: string) {
@@ -40,6 +44,7 @@ export default function AllPackagesPage() {
 
         if (!Array.isArray(data)) {
           setError("Could not load packages.");
+
           return;
         }
 

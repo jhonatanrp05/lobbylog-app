@@ -1,10 +1,10 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { Button, Chip } from "@heroui/react";
 
-import { useAuth } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
-import { SunIcon, MoonIcon } from "../components/icons";
-import { logoutRequest } from "../services/api";
+import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { SunIcon, MoonIcon } from "@/components/icons";
+import { logoutRequest } from "@/services/api";
 
 function getNavLinks(role: string) {
   if (role === "ADMIN") {
@@ -15,10 +15,7 @@ function getNavLinks(role: string) {
   }
 
   if (role === "RECEPTIONIST") {
-    return [
-      { label: "Log Package", to: "/packages/log" },
-      { label: "My Logged", to: "/packages/my-logged" },
-    ];
+    return [{ label: "My Logged", to: "/packages/my-logged" }];
   }
 
   if (role === "RESIDENT") {

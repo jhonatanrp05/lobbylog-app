@@ -10,10 +10,10 @@ import {
   TextField,
 } from "@heroui/react";
 
-import { useAuth } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
-import { loginRequest } from "../services/api";
-import { SunIcon, MoonIcon } from "../components/icons";
+import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { loginRequest } from "@/services/api";
+import { SunIcon, MoonIcon } from "@/components/icons";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");

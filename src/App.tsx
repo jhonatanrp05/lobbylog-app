@@ -5,8 +5,8 @@ import Dashboard from "./pages/dashboard";
 import AppLayout from "./layouts/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AllPackagesPage from "./pages/packages/all-packages";
-import MyLoggedPackagesPage from "./pages/packages/my-logged-packages";
-import MyPackagesPage from "./pages/packages/my-packages";
+import MyLoggedPackagesPage from "./pages/packages/my-logged";
+import MyPackagesPage from "./pages/packages/my-packages/index";
 import UsersPage from "./pages/users/index";
 import NotFoundPage from "./pages/not-found";
 
