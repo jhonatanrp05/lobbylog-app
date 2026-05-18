@@ -1,37 +1,64 @@
 import type { AdminPackage } from "@/lib/types";
 
 import { useState, useEffect } from "react";
-import { Skeleton, Table } from "@heroui/react";
+import { Button, Skeleton, Table, Toast, useOverlayState } from "@heroui/react";
+
+import { DeletePackageModal } from "./components/DeletePackageModal";
 
 import { StatusChip } from "@/components/StatusChip";
 import { formatDate } from "@/lib/utils";
-import { getPackagesRequest } from "@/services/api";
+import { getPackagesRequest, deletePackageRequest } from "@/services/api";
 
 export default function AllPackagesPage() {
+  const deleteModalState = useOverlayState();
+
   const [packages, setPackages] = useState<AdminPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [packageToDelete, setPackageToDelete] = useState<AdminPackage | null>(
+    null,
+  );
+
+  async function fetchPackages() {
+    try {
+      const data = await getPackagesRequest();
+
+      if (!Array.isArray(data)) {
+        setError("Could not load packages.");
+
+        return;
+      }
+
+      setPackages(data);
+    } catch {
+      setError("Could not load packages.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchPackages() {
-      try {
-        const data = await getPackagesRequest();
-
-        if (!Array.isArray(data)) {
-          setError("Could not load packages.");
-
-          return;
-        }
-
-        setPackages(data);
-      } catch {
-        setError("Could not load packages.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchPackages();
   }, []);
+
+  function openDeleteDialog(pkg: AdminPackage) {
+    setPackageToDelete(pkg);
+    deleteModalState.open();
+  }
+
+  async function handleDelete() {
+    if (!packageToDelete) return;
+    try {
+      await deletePackageRequest(packageToDelete.id);
+      setPackages((prev) => prev.filter((p) => p.id !== packageToDelete.id));
+      deleteModalState.close();
+      setPackageToDelete(null);
+      Toast.toast.success("Package deleted successfully.");
+    } catch {
+      Toast.toast.danger("Could not delete package.");
+      deleteModalState.close();
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,6 +92,7 @@ export default function AllPackagesPage() {
                 <Table.Column>Status</Table.Column>
                 <Table.Column>Logged by</Table.Column>
                 <Table.Column>Logged on</Table.Column>
+                <Table.Column>Actions</Table.Column>
               </Table.Header>
               <Table.Body>
                 {packages.map((pkg) => (
@@ -77,6 +105,15 @@ export default function AllPackagesPage() {
                     </Table.Cell>
                     <Table.Cell>{pkg.porter.name}</Table.Cell>
                     <Table.Cell>{formatDate(pkg.createdAt)}</Table.Cell>
+                    <Table.Cell>
+                      <Button
+                        size="sm"
+                        variant="danger-soft"
+                        onPress={() => openDeleteDialog(pkg)}
+                      >
+                        Delete
+                      </Button>
+                    </Table.Cell>
                   </Table.Row>
                 ))}
               </Table.Body>
@@ -84,6 +121,12 @@ export default function AllPackagesPage() {
           </Table.ScrollContainer>
         </Table>
       )}
+
+      <DeletePackageModal
+        pkg={packageToDelete}
+        state={deleteModalState}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

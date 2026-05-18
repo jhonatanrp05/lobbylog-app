@@ -120,3 +120,13 @@ export const confirmPackageRequest = async (id: string) => {
 
   return res.json();
 };
+
+export const deletePackageRequest = async (id: string) => {
+  const res = await fetch(`${API_URL}/packages/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: getHeaders(),
+  });
+
+  return res.json();
+};
