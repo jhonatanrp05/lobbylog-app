@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button, Chip, Spinner, Table } from "@heroui/react";
 
-import { getLoggedPackagesRequest, deliverPackageRequest } from "../../services/api";
+import {
+  getLoggedPackagesRequest,
+  deliverPackageRequest,
+} from "../../services/api";
 
 type PackageStatus = "PENDING" | "DELIVERED" | "CONFIRMED";
 
@@ -15,16 +18,30 @@ type Package = {
 
 function StatusChip({ status }: { status: PackageStatus }) {
   if (status === "PENDING") {
-    return <Chip color="warning" size="sm" variant="soft">Pending</Chip>;
+    return (
+      <Chip color="warning" size="sm" variant="soft">
+        Pending
+      </Chip>
+    );
   }
   if (status === "DELIVERED") {
-    return <Chip color="accent" size="sm" variant="soft">Delivered</Chip>;
+    return (
+      <Chip color="accent" size="sm" variant="soft">
+        Delivered
+      </Chip>
+    );
   }
-  return <Chip color="success" size="sm" variant="soft">Confirmed</Chip>;
+
+  return (
+    <Chip color="success" size="sm" variant="soft">
+      Confirmed
+    </Chip>
+  );
 }
 
 function formatDate(dateString: string | null) {
   if (!dateString) return "—";
+
   return new Date(dateString).toLocaleDateString();
 }
 
@@ -39,6 +56,7 @@ export default function MyLoggedPackagesPage() {
     setError("");
     try {
       const data = await getLoggedPackagesRequest();
+
       setPackages(data);
     } catch {
       setError("Could not load packages.");
@@ -81,7 +99,7 @@ export default function MyLoggedPackagesPage() {
         <p className="text-muted">You have not logged any packages yet.</p>
       ) : (
         <Table>
-          <Table.ScrollContainer minWidth={500}>
+          <Table.ScrollContainer className="min-w-[600px]">
             <Table.Content aria-label="My logged packages">
               <Table.Header>
                 <Table.Column>Description</Table.Column>
