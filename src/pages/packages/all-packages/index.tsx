@@ -1,39 +1,14 @@
-import type { PackageStatus, AdminPackage as Package } from "@/lib/types";
+import type { AdminPackage } from "@/lib/types";
 
 import { useState, useEffect } from "react";
-import { Chip, Skeleton, Table } from "@heroui/react";
+import { Skeleton, Table } from "@heroui/react";
 
+import { StatusChip } from "@/components/StatusChip";
+import { formatDate } from "@/lib/utils";
 import { getPackagesRequest } from "@/services/api";
 
-function StatusChip({ status }: { status: PackageStatus }) {
-  if (status === "PENDING") {
-    return (
-      <Chip color="warning" size="sm" variant="soft">
-        Pending
-      </Chip>
-    );
-  }
-  if (status === "DELIVERED") {
-    return (
-      <Chip color="accent" size="sm" variant="soft">
-        Delivered
-      </Chip>
-    );
-  }
-
-  return (
-    <Chip color="success" size="sm" variant="soft">
-      Confirmed
-    </Chip>
-  );
-}
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString();
-}
-
 export default function AllPackagesPage() {
-  const [packages, setPackages] = useState<Package[]>([]);
+  const [packages, setPackages] = useState<AdminPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
