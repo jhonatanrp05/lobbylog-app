@@ -1,27 +1,22 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + HeroUI</title>
-    <meta key="title" content="Vite + HeroUI" property="og:title" />
-    <meta
-      content="Make beautiful websites regardless of your design experience."
-      property="og:description"
-    />
-    <meta
-      content="Make beautiful websites regardless of your design experience."
-      name="description"
-    />
-    <meta
-      key="viewport"
-      content="viewport-fit=cover, width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
-      name="viewport"
-    />
+    <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>LobbyLog</title>
+    <meta property="og:title" content="LobbyLog" />
+    <meta property="og:description" content="Lobby package management system" />
+    <meta name="description" content="Lobby package management system" />
     <link href="/favicon.ico" rel="icon" />
+    <script>
+      (function () {
+        var theme = localStorage.getItem("theme") || "dark";
+        document.documentElement.className = theme;
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
   </head>
-  <body>
+  <body class="bg-background text-foreground">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
