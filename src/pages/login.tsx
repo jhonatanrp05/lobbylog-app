@@ -1,5 +1,3 @@
-import type { FieldErrors } from "@/lib/schemas";
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,56 +9,59 @@ import {
   Label,
   TextField,
 } from "@heroui/react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useMutation } from "@tanstack/react-query";
+import { CgSpinner } from "react-icons/cg";
 
-import { useAuth } from "@/context/AuthContext";
-import { useTheme } from "@/context/ThemeContext";
-import { loginRequest } from "@/services/api";
-import { loginSchema, collectErrors } from "@/lib/schemas";
 import { SunIcon, MoonIcon } from "@/components/icons";
+import { loginRequest } from "@/services/api";
+import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
+
+const formSchema = z.object({
+  email: z.email("Enter a valid email"),
+  password: z.string().min(1, "Password is required"),
+});
+
+type FormSchema = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [serverError, setServerError] = useState("");
-  const [isPending, setIsPending] = useState(false);
-
+  const [error, setError] = useState("");
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormSchema>({
+    defaultValues: { email: "", password: "" },
+    resolver: zodResolver(formSchema),
+  });
   const navigate = useNavigate();
 
-  const isDark = theme === "dark";
-  const logoSrc = isDark ? "/icon-lobbylog-dark.png" : "/icon-lobbylog.png";
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setServerError("");
-
-    const result = loginSchema.safeParse({ email, password });
-
-    if (!result.success) {
-      setErrors(collectErrors(result.error));
-
-      return;
-    }
-    setErrors({});
-    setIsPending(true);
-
-    try {
-      const data = await loginRequest(email, password);
-
+  const { mutate, isPending } = useMutation({
+    mutationFn: ({ email, password }: FormSchema) =>
+      loginRequest(email, password),
+    onSuccess: (data) => {
       if (data.user) {
         login(data.user);
         navigate("/dashboard");
       } else {
-        setServerError(data.error || "Invalid credentials");
+        setError(data.error || "Invalid credentials");
       }
-    } catch {
-      setServerError("Could not connect to the server");
-    } finally {
-      setIsPending(false);
-    }
+    },
+    onError: () => setError("Could not connect to the server"),
+  });
+
+  const onSubmit = (data: FormSchema) => {
+    setError("");
+    mutate(data);
   };
+
+  const isDark = theme === "dark";
+  const logoSrc = isDark ? "/icon-lobbylog-dark.png" : "/icon-lobbylog.png";
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-sky-50 via-white to-teal-50 dark:from-sky-950 dark:via-blue-950 dark:to-teal-950">
@@ -112,52 +113,61 @@ export default function LoginPage() {
             </div>
           </Card.Header>
 
-          <Form validationBehavior="aria" onSubmit={handleSubmit}>
+          <Form onSubmit={handleSubmit(onSubmit)}>
             <Card.Content className="pt-6 sm:pt-8">
               <div className="flex flex-col gap-5 sm:gap-6">
-                <TextField
-                  isInvalid={!!errors.email}
+                <Controller
+                  control={control}
                   name="email"
-                  type="email"
-                  value={email}
-                  onChange={setEmail}
-                >
-                  <Label>Email</Label>
-                  <Input
-                    autoComplete="email"
-                    placeholder="name@example.com"
-                    variant="secondary"
-                  />
-                  <FieldError>{errors.email}</FieldError>
-                </TextField>
-
-                <TextField
-                  isInvalid={!!errors.password}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      isInvalid={!!errors.email}
+                      type="email"
+                    >
+                      <Label>Email</Label>
+                      <Input
+                        autoComplete="email"
+                        placeholder="name@example.com"
+                        variant="secondary"
+                      />
+                      <FieldError>{errors.email?.message}</FieldError>
+                    </TextField>
+                  )}
+                />
+                <Controller
+                  control={control}
                   name="password"
-                  type="password"
-                  value={password}
-                  onChange={setPassword}
-                >
-                  <Label>Password</Label>
-                  <Input
-                    autoComplete="current-password"
-                    placeholder="Your password"
-                    variant="secondary"
-                  />
-                  <FieldError>{errors.password}</FieldError>
-                </TextField>
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      isInvalid={!!errors.password}
+                      type="password"
+                    >
+                      <Label>Password</Label>
+                      <Input
+                        autoComplete="current-password"
+                        placeholder="Your password"
+                        variant="secondary"
+                      />
+                      <FieldError>{errors.password?.message}</FieldError>
+                    </TextField>
+                  )}
+                />
 
-                {serverError && (
-                  <p className="text-center text-sm text-danger">
-                    {serverError}
-                  </p>
+                {error && (
+                  <p className="text-center text-sm text-danger">{error}</p>
                 )}
               </div>
             </Card.Content>
 
             <Card.Footer className="flex mt-6 flex-col gap-2 pb-6 pt-3 sm:pb-8 sm:pt-4">
               <Button className="w-full" isPending={isPending} type="submit">
-                Sign in
+                {isSubmitting ? (
+                  <CgSpinner className="animate-spin" />
+                ) : (
+                  "Sign In"
+                )}
               </Button>
             </Card.Footer>
           </Form>

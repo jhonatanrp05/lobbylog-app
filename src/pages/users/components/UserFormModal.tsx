@@ -1,7 +1,10 @@
 import type { Role, User, CreatedCredentials } from "@/lib/types";
-import type { FieldErrors } from "@/lib/schemas";
 
 import { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import * as z from "zod";
 import {
   Button,
   FieldError,
@@ -16,7 +19,9 @@ import {
 } from "@heroui/react";
 
 import { createUserRequest, updateUserRequest } from "@/services/api";
-import { userFormSchema, collectErrors } from "@/lib/schemas";
+import { userFormSchema } from "@/lib/schemas";
+
+type FormSchema = z.infer<typeof userFormSchema>;
 
 type UserFormModalProps = {
   state: {
@@ -32,88 +37,67 @@ type UserFormModalProps = {
 
 export function UserFormModal({ state, user, onSuccess }: UserFormModalProps) {
   const isEdit = !!user;
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<Role>("RESIDENT");
-  const [unit, setUnit] = useState("");
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+
+  const {
+    control,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<FormSchema>({
+    defaultValues: { name: "", email: "", role: "RESIDENT" as const, unit: "" },
+    resolver: zodResolver(userFormSchema),
+  });
+
+  const watchedRole = watch("role");
 
   useEffect(() => {
     if (!state.isOpen) return;
-    setErrors({});
     setFormError("");
     if (user) {
-      setName(user.name);
-      setEmail(user.email);
-      setRole(user.role === "RECEPTIONIST" ? "RECEPTIONIST" : "RESIDENT");
-      setUnit(user.unit ?? "");
+      reset({
+        name: user.name,
+        email: user.email,
+        role: user.role === "RECEPTIONIST" ? "RECEPTIONIST" : "RESIDENT",
+        unit: user.unit ?? "",
+      });
     } else {
-      setName("");
-      setEmail("");
-      setRole("RESIDENT");
-      setUnit("");
+      reset({ name: "", email: "", role: "RESIDENT" as const, unit: "" });
     }
   }, [state.isOpen, user]);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setFormError("");
-
-    const result = userFormSchema.safeParse({ name, email, role, unit });
-
-    if (!result.success) {
-      setErrors(collectErrors(result.error));
-
-      return;
-    }
-    setErrors({});
-    setIsSubmitting(true);
-
-    try {
+  const { mutate, isPending } = useMutation({
+    mutationFn: (values: FormSchema) => {
       const body: { name: string; email: string; role: Role; unit?: string } = {
-        name,
-        email,
-        role,
+        name: values.name,
+        email: values.email,
+        role: values.role,
+        ...(values.role === "RESIDENT" && values.unit ? { unit: values.unit } : {}),
       };
 
-      if (role === "RESIDENT" && unit) {
-        body.unit = unit;
+      return user ? updateUserRequest(user.id, body) : createUserRequest(body);
+    },
+    onSuccess: (data) => {
+      if (data.error) {
+        setFormError(data.error);
+
+        return;
       }
-
-      if (user) {
-        const data = await updateUserRequest(user.id, body);
-
-        if (data.error) {
-          setFormError(data.error);
-
-          return;
-        }
-        state.close();
-        Toast.toast.success("User updated successfully.");
-        onSuccess();
-      } else {
-        const data = await createUserRequest(body);
-
-        if (data.error) {
-          setFormError(data.error);
-
-          return;
-        }
-        state.close();
-        Toast.toast.success("User created successfully.");
-        onSuccess({ email: data.email, password: data.password });
-      }
-    } catch {
-      setFormError(
-        isEdit ? "Could not update user." : "Could not create user.",
+      state.close();
+      Toast.toast.success(
+        isEdit ? "User updated successfully." : "User created successfully.",
       );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+      onSuccess(isEdit ? undefined : { email: data.email, password: data.password });
+    },
+    onError: () =>
+      setFormError(isEdit ? "Could not update user." : "Could not create user."),
+  });
+
+  const onSubmit = (values: FormSchema) => {
+    setFormError("");
+    mutate(values);
+  };
 
   return (
     <Modal state={state}>
@@ -125,75 +109,79 @@ export function UserFormModal({ state, user, onSuccess }: UserFormModalProps) {
               <Modal.CloseTrigger />
             </Modal.Header>
             <Modal.Body>
-              <Form validationBehavior="aria" onSubmit={handleSubmit}>
+              <Form onSubmit={handleSubmit(onSubmit)}>
                 <div className="flex flex-col gap-5 p-1">
-                  <TextField
-                    isInvalid={!!errors.name}
+                  <Controller
+                    control={control}
                     name="name"
-                    value={name}
-                    onChange={setName}
-                  >
-                    <Label>Name</Label>
-                    <Input placeholder="e.g. John Doe" variant="secondary" />
-                    <FieldError>{errors.name}</FieldError>
-                  </TextField>
+                    render={({ field }) => (
+                      <TextField {...field} isInvalid={!!errors.name}>
+                        <Label>Name</Label>
+                        <Input placeholder="e.g. John Doe" variant="secondary" />
+                        <FieldError>{errors.name?.message}</FieldError>
+                      </TextField>
+                    )}
+                  />
 
-                  <TextField
-                    isInvalid={!!errors.email}
+                  <Controller
+                    control={control}
                     name="email"
-                    type="email"
-                    value={email}
-                    onChange={setEmail}
-                  >
-                    <Label>Email</Label>
-                    <Input
-                      placeholder="e.g. john@example.com"
-                      variant="secondary"
-                    />
-                    <FieldError>{errors.email}</FieldError>
-                  </TextField>
+                    render={({ field }) => (
+                      <TextField {...field} isInvalid={!!errors.email} type="email">
+                        <Label>Email</Label>
+                        <Input
+                          placeholder="e.g. john@example.com"
+                          variant="secondary"
+                        />
+                        <FieldError>{errors.email?.message}</FieldError>
+                      </TextField>
+                    )}
+                  />
 
-                  <Select
-                    selectedKey={role}
-                    onSelectionChange={(key) => setRole(key as Role)}
-                  >
-                    <Label>Role</Label>
-                    <Select.Trigger>
-                      <Select.Value />
-                      <Select.Indicator />
-                    </Select.Trigger>
-                    <Select.Popover>
-                      <ListBox>
-                        <ListBox.Item id="RECEPTIONIST">
-                          Receptionist
-                        </ListBox.Item>
-                        <ListBox.Item id="RESIDENT">Resident</ListBox.Item>
-                      </ListBox>
-                    </Select.Popover>
-                  </Select>
+                  <Controller
+                    control={control}
+                    name="role"
+                    render={({ field }) => (
+                      <Select
+                        selectedKey={field.value}
+                        onSelectionChange={(key) => field.onChange(key as Role)}
+                      >
+                        <Label>Role</Label>
+                        <Select.Trigger>
+                          <Select.Value />
+                          <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            <ListBox.Item id="RECEPTIONIST">
+                              Receptionist
+                            </ListBox.Item>
+                            <ListBox.Item id="RESIDENT">Resident</ListBox.Item>
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
+                    )}
+                  />
 
-                  {role === "RESIDENT" && (
-                    <TextField
-                      isInvalid={!!errors.unit}
+                  {watchedRole === "RESIDENT" && (
+                    <Controller
+                      control={control}
                       name="unit"
-                      value={unit}
-                      onChange={setUnit}
-                    >
-                      <Label>Unit</Label>
-                      <Input placeholder="e.g. 4B" variant="secondary" />
-                      <FieldError>{errors.unit}</FieldError>
-                    </TextField>
+                      render={({ field }) => (
+                        <TextField {...field} isInvalid={!!errors.unit}>
+                          <Label>Unit</Label>
+                          <Input placeholder="e.g. 4B" variant="secondary" />
+                          <FieldError>{errors.unit?.message}</FieldError>
+                        </TextField>
+                      )}
+                    />
                   )}
 
                   {formError && (
                     <p className="text-sm text-danger">{formError}</p>
                   )}
 
-                  <Button
-                    className="w-full"
-                    isPending={isSubmitting}
-                    type="submit"
-                  >
+                  <Button className="w-full" isPending={isPending} type="submit">
                     {isEdit ? "Save changes" : "Create user"}
                   </Button>
                 </div>
