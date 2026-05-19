@@ -53,6 +53,17 @@ export const createUserRequest = async (data: object) => {
   return res.json();
 };
 
+export const updateUserRequest = async (id: string, data: object) => {
+  const res = await fetch(`${API_URL}/users/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+
+  return res.json();
+};
+
 export const deleteUserRequest = async (id: string) => {
   const res = await fetch(`${API_URL}/users/${id}`, {
     method: "DELETE",
@@ -116,6 +127,17 @@ export const confirmPackageRequest = async (id: string) => {
     method: "PATCH",
     credentials: "include",
     headers: getHeaders(),
+  });
+
+  return res.json();
+};
+
+export const updatePackageRequest = async (id: string, data: object) => {
+  const res = await fetch(`${API_URL}/packages/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
   });
 
   return res.json();

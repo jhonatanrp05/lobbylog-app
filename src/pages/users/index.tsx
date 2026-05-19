@@ -2,18 +2,17 @@ import type { User, CreatedCredentials } from "@/lib/types";
 
 import { useState, useEffect } from "react";
 import { Button, Skeleton, Table, Toast, useOverlayState } from "@heroui/react";
+import { MdEdit, MdDeleteOutline } from "react-icons/md";
 
 import { RoleChip } from "./components/RoleChip";
 import { CredentialsBanner } from "./components/CredentialsBanner";
-import { CreateUserModal } from "./components/CreateUserModal";
+import { UserFormModal } from "./components/UserFormModal";
 
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { getUsersRequest, deleteUserRequest } from "@/services/api";
-import { useAuth } from "@/context/AuthContext";
 
 export default function UsersPage() {
-  const { user: currentUser } = useAuth();
-  const createModalState = useOverlayState();
+  const userModalState = useOverlayState();
   const deleteModalState = useOverlayState();
 
   const [users, setUsers] = useState<User[]>([]);
@@ -21,6 +20,7 @@ export default function UsersPage() {
   const [error, setError] = useState("");
   const [createdCredentials, setCreatedCredentials] =
     useState<CreatedCredentials | null>(null);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   async function fetchUsers() {
@@ -43,6 +43,16 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  function openCreateDialog() {
+    setUserToEdit(null);
+    userModalState.open();
+  }
+
+  function openEditDialog(user: User) {
+    setUserToEdit(user);
+    userModalState.open();
+  }
 
   function openDeleteDialog(user: User) {
     setUserToDelete(user);
@@ -67,7 +77,7 @@ export default function UsersPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Users</h1>
-        <Button onPress={createModalState.open}>Create user</Button>
+        <Button onPress={openCreateDialog}>Create user</Button>
       </div>
 
       {createdCredentials && (
@@ -114,14 +124,26 @@ export default function UsersPage() {
                     </Table.Cell>
                     <Table.Cell>{user.unit ?? "—"}</Table.Cell>
                     <Table.Cell>
-                      <Button
-                        isDisabled={user.id === currentUser?.id}
-                        size="sm"
-                        variant="danger-soft"
-                        onPress={() => openDeleteDialog(user)}
-                      >
-                        Delete
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          isDisabled={user.role === "ADMIN"}
+                          size="sm"
+                          variant="outline"
+                          onPress={() => openEditDialog(user)}
+                        >
+                          <MdEdit />
+                          Edit
+                        </Button>
+                        <Button
+                          isDisabled={user.role === "ADMIN"}
+                          size="sm"
+                          variant="danger-soft"
+                          onPress={() => openDeleteDialog(user)}
+                        >
+                          <MdDeleteOutline />
+                          Delete
+                        </Button>
+                      </div>
                     </Table.Cell>
                   </Table.Row>
                 ))}
@@ -131,10 +153,11 @@ export default function UsersPage() {
         </Table>
       )}
 
-      <CreateUserModal
-        state={createModalState}
+      <UserFormModal
+        state={userModalState}
+        user={userToEdit}
         onSuccess={(credentials) => {
-          setCreatedCredentials(credentials);
+          if (credentials) setCreatedCredentials(credentials);
           fetchUsers();
         }}
       />

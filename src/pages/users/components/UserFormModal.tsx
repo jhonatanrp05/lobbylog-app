@@ -1,6 +1,7 @@
-import type { Role, CreatedCredentials } from "@/lib/types";
+import type { Role, User, CreatedCredentials } from "@/lib/types";
+import type { FieldErrors } from "@/lib/schemas";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Button,
   FieldError,
@@ -14,9 +15,10 @@ import {
   Toast,
 } from "@heroui/react";
 
-import { createUserRequest } from "@/services/api";
+import { createUserRequest, updateUserRequest } from "@/services/api";
+import { userFormSchema, collectErrors } from "@/lib/schemas";
 
-type CreateUserModalProps = {
+type UserFormModalProps = {
   state: {
     isOpen: boolean;
     open: () => void;
@@ -24,20 +26,50 @@ type CreateUserModalProps = {
     setOpen: (isOpen: boolean) => void;
     toggle: () => void;
   };
-  onSuccess: (credentials: CreatedCredentials) => void;
+  user?: User | null;
+  onSuccess: (credentials?: CreatedCredentials) => void;
 };
 
-export function CreateUserModal({ state, onSuccess }: CreateUserModalProps) {
+export function UserFormModal({ state, user, onSuccess }: UserFormModalProps) {
+  const isEdit = !!user;
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("RESIDENT");
   const [unit, setUnit] = useState("");
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    if (!state.isOpen) return;
+    setErrors({});
+    setFormError("");
+    if (user) {
+      setName(user.name);
+      setEmail(user.email);
+      setRole(user.role === "RECEPTIONIST" ? "RECEPTIONIST" : "RESIDENT");
+      setUnit(user.unit ?? "");
+    } else {
+      setName("");
+      setEmail("");
+      setRole("RESIDENT");
+      setUnit("");
+    }
+  }, [state.isOpen, user]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFormError("");
+
+    const result = userFormSchema.safeParse({ name, email, role, unit });
+
+    if (!result.success) {
+      setErrors(collectErrors(result.error));
+
+      return;
+    }
+    setErrors({});
     setIsSubmitting(true);
 
     try {
@@ -51,23 +83,33 @@ export function CreateUserModal({ state, onSuccess }: CreateUserModalProps) {
         body.unit = unit;
       }
 
-      const data = await createUserRequest(body);
+      if (user) {
+        const data = await updateUserRequest(user.id, body);
 
-      if (data.error) {
-        setFormError(data.error);
+        if (data.error) {
+          setFormError(data.error);
 
-        return;
+          return;
+        }
+        state.close();
+        Toast.toast.success("User updated successfully.");
+        onSuccess();
+      } else {
+        const data = await createUserRequest(body);
+
+        if (data.error) {
+          setFormError(data.error);
+
+          return;
+        }
+        state.close();
+        Toast.toast.success("User created successfully.");
+        onSuccess({ email: data.email, password: data.password });
       }
-
-      setName("");
-      setEmail("");
-      setRole("RESIDENT");
-      setUnit("");
-      state.close();
-      Toast.toast.success("User created successfully.");
-      onSuccess({ email: data.email, password: data.password });
     } catch {
-      setFormError("Could not create user.");
+      setFormError(
+        isEdit ? "Could not update user." : "Could not create user.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -79,25 +121,25 @@ export function CreateUserModal({ state, onSuccess }: CreateUserModalProps) {
         <Modal.Container>
           <Modal.Dialog>
             <Modal.Header>
-              <Modal.Heading>Create User</Modal.Heading>
+              <Modal.Heading>{isEdit ? "Edit User" : "Create User"}</Modal.Heading>
               <Modal.CloseTrigger />
             </Modal.Header>
             <Modal.Body>
-              <Form onSubmit={handleSubmit}>
-                <div className="flex flex-col gap-5">
+              <Form validationBehavior="aria" onSubmit={handleSubmit}>
+                <div className="flex flex-col gap-5 p-1">
                   <TextField
-                    isRequired
+                    isInvalid={!!errors.name}
                     name="name"
                     value={name}
                     onChange={setName}
                   >
                     <Label>Name</Label>
                     <Input placeholder="e.g. John Doe" variant="secondary" />
-                    <FieldError />
+                    <FieldError>{errors.name}</FieldError>
                   </TextField>
 
                   <TextField
-                    isRequired
+                    isInvalid={!!errors.email}
                     name="email"
                     type="email"
                     value={email}
@@ -108,11 +150,10 @@ export function CreateUserModal({ state, onSuccess }: CreateUserModalProps) {
                       placeholder="e.g. john@example.com"
                       variant="secondary"
                     />
-                    <FieldError />
+                    <FieldError>{errors.email}</FieldError>
                   </TextField>
 
                   <Select
-                    isRequired
                     selectedKey={role}
                     onSelectionChange={(key) => setRole(key as Role)}
                   >
@@ -121,7 +162,6 @@ export function CreateUserModal({ state, onSuccess }: CreateUserModalProps) {
                       <Select.Value />
                       <Select.Indicator />
                     </Select.Trigger>
-                    <FieldError />
                     <Select.Popover>
                       <ListBox>
                         <ListBox.Item id="RECEPTIONIST">
@@ -133,10 +173,15 @@ export function CreateUserModal({ state, onSuccess }: CreateUserModalProps) {
                   </Select>
 
                   {role === "RESIDENT" && (
-                    <TextField name="unit" value={unit} onChange={setUnit}>
-                      <Label>Unit (optional)</Label>
+                    <TextField
+                      isInvalid={!!errors.unit}
+                      name="unit"
+                      value={unit}
+                      onChange={setUnit}
+                    >
+                      <Label>Unit</Label>
                       <Input placeholder="e.g. 4B" variant="secondary" />
-                      <FieldError />
+                      <FieldError>{errors.unit}</FieldError>
                     </TextField>
                   )}
 
@@ -149,7 +194,7 @@ export function CreateUserModal({ state, onSuccess }: CreateUserModalProps) {
                     isPending={isSubmitting}
                     type="submit"
                   >
-                    Create user
+                    {isEdit ? "Save changes" : "Create user"}
                   </Button>
                 </div>
               </Form>
