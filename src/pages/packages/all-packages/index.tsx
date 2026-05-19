@@ -1,5 +1,6 @@
 import type { AdminPackage } from "@/lib/types";
 
+import { MdDeleteOutline } from "react-icons/md";
 import { useState, useEffect } from "react";
 import { Button, Skeleton, Table, Toast, useOverlayState } from "@heroui/react";
 
@@ -110,6 +111,7 @@ export default function AllPackagesPage() {
                         variant="danger-soft"
                         onPress={() => openDeleteDialog(pkg)}
                       >
+                        <MdDeleteOutline />
                         Delete
                       </Button>
                     </Table.Cell>
@@ -125,7 +127,9 @@ export default function AllPackagesPage() {
         message={
           <>
             Are you sure you want to delete the package{" "}
-            <span className="font-semibold">{packageToDelete?.description}</span>
+            <span className="font-semibold">
+              {packageToDelete?.description}
+            </span>
             ? This action cannot be undone.
           </>
         }
