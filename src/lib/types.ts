@@ -40,6 +40,9 @@ export type AdminPackage = {
   description: string;
   status: PackageStatus;
   createdAt: string;
+  deliveredAt: string | null;
+  recipientId: string;
+  photoUrl: string | null;
   recipient: { name: string; unit: string | null };
   porter: { name: string };
 };

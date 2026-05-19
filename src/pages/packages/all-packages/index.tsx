@@ -2,16 +2,19 @@ import type { AdminPackage } from "@/lib/types";
 
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { MdDeleteOutline } from "react-icons/md";
+import { MdEdit, MdDeleteOutline } from "react-icons/md";
 import { Button, Skeleton, Table, Toast, useOverlayState } from "@heroui/react";
 
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { PackageFormModal } from "@/components/PackageFormModal";
 import { StatusChip } from "@/components/StatusChip";
 import { formatDate } from "@/lib/utils";
 import { getPackagesRequest, deletePackageRequest } from "@/services/api";
 
 export default function AllPackagesPage() {
+  const packageModalState = useOverlayState();
   const deleteModalState = useOverlayState();
+  const [packageToEdit, setPackageToEdit] = useState<AdminPackage | null>(null);
   const [packageToDelete, setPackageToDelete] = useState<AdminPackage | null>(
     null,
   );
@@ -45,6 +48,11 @@ export default function AllPackagesPage() {
       deleteModalState.close();
     },
   });
+
+  function openEditDialog(pkg: AdminPackage) {
+    setPackageToEdit(pkg);
+    packageModalState.open();
+  }
 
   function openDeleteDialog(pkg: AdminPackage) {
     setPackageToDelete(pkg);
@@ -99,13 +107,22 @@ export default function AllPackagesPage() {
                     <Table.Cell>{pkg.porter.name}</Table.Cell>
                     <Table.Cell>{formatDate(pkg.createdAt)}</Table.Cell>
                     <Table.Cell>
-                      <Button
-                        size="sm"
-                        variant="danger-soft"
-                        onPress={() => openDeleteDialog(pkg)}
-                      >
-                        <MdDeleteOutline />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onPress={() => openEditDialog(pkg)}
+                        >
+                          <MdEdit />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger-soft"
+                          onPress={() => openDeleteDialog(pkg)}
+                        >
+                          <MdDeleteOutline />
+                        </Button>
+                      </div>
                     </Table.Cell>
                   </Table.Row>
                 ))}
@@ -114,6 +131,12 @@ export default function AllPackagesPage() {
           </Table.ScrollContainer>
         </Table>
       )}
+
+      <PackageFormModal
+        pkg={packageToEdit}
+        state={packageModalState}
+        onSuccess={refetch}
+      />
 
       <ConfirmModal
         message={
