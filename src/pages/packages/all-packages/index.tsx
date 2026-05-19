@@ -1,7 +1,7 @@
 import type { AdminPackage } from "@/lib/types";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { MdDeleteOutline } from "react-icons/md";
 import { Button, Skeleton, Table, Toast, useOverlayState } from "@heroui/react";
 
@@ -11,11 +11,17 @@ import { formatDate } from "@/lib/utils";
 import { getPackagesRequest, deletePackageRequest } from "@/services/api";
 
 export default function AllPackagesPage() {
-  const queryClient = useQueryClient();
   const deleteModalState = useOverlayState();
-  const [packageToDelete, setPackageToDelete] = useState<AdminPackage | null>(null);
+  const [packageToDelete, setPackageToDelete] = useState<AdminPackage | null>(
+    null,
+  );
 
-  const { data: packages = [], isLoading, isError } = useQuery<AdminPackage[]>({
+  const {
+    data: packages = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<AdminPackage[]>({
     queryKey: ["packages"],
     queryFn: async () => {
       const data = await getPackagesRequest();
@@ -29,7 +35,7 @@ export default function AllPackagesPage() {
   const { mutate: deletePackage } = useMutation({
     mutationFn: (id: string) => deletePackageRequest(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["packages"] });
+      refetch();
       deleteModalState.close();
       setPackageToDelete(null);
       Toast.toast.success("Package deleted successfully.");
@@ -99,7 +105,6 @@ export default function AllPackagesPage() {
                         onPress={() => openDeleteDialog(pkg)}
                       >
                         <MdDeleteOutline />
-                        Delete
                       </Button>
                     </Table.Cell>
                   </Table.Row>

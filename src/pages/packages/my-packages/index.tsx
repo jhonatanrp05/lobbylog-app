@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button, Skeleton, Toast } from "@heroui/react";
 
 import { TagIcon } from "@/components/icons";
@@ -6,9 +6,12 @@ import { getMyPackagesRequest, confirmPackageRequest } from "@/services/api";
 import { PackageCard, Package } from "@/components/PackageCard";
 
 export default function MyPackagesPage() {
-  const queryClient = useQueryClient();
-
-  const { data: packages = [], isLoading, isError } = useQuery<Package[]>({
+  const {
+    data: packages = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<Package[]>({
     queryKey: ["my-packages"],
     queryFn: async () => {
       const data = await getMyPackagesRequest();
@@ -26,7 +29,7 @@ export default function MyPackagesPage() {
   } = useMutation({
     mutationFn: (id: string) => confirmPackageRequest(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["my-packages"] });
+      refetch();
     },
     onError: () => Toast.toast.danger("Could not confirm package."),
   });

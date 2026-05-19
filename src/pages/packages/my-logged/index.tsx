@@ -1,19 +1,27 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button, Skeleton, Toast, useOverlayState } from "@heroui/react";
 import { MdEdit } from "react-icons/md";
 
-import { PersonIcon } from "@/components/icons";
-import { getLoggedPackagesRequest, deliverPackageRequest } from "@/services/api";
-import { PackageCard, Package } from "@/components/PackageCard";
 import { PackageFormModal } from "./components/PackageFormModal";
 
+import { PersonIcon } from "@/components/icons";
+import {
+  getLoggedPackagesRequest,
+  deliverPackageRequest,
+} from "@/services/api";
+import { PackageCard, Package } from "@/components/PackageCard";
+
 export default function MyLoggedPackagesPage() {
-  const queryClient = useQueryClient();
   const packageModalState = useOverlayState();
   const [packageToEdit, setPackageToEdit] = useState<Package | null>(null);
 
-  const { data: packages = [], isLoading, isError } = useQuery<Package[]>({
+  const {
+    data: packages = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<Package[]>({
     queryKey: ["my-logged-packages"],
     queryFn: async () => {
       const data = await getLoggedPackagesRequest();
@@ -31,7 +39,7 @@ export default function MyLoggedPackagesPage() {
   } = useMutation({
     mutationFn: (id: string) => deliverPackageRequest(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["my-logged-packages"] });
+      refetch();
       Toast.toast.success("Package marked as delivered.");
     },
     onError: () => Toast.toast.danger("Could not mark package as delivered."),
@@ -127,9 +135,7 @@ export default function MyLoggedPackagesPage() {
       <PackageFormModal
         pkg={packageToEdit}
         state={packageModalState}
-        onSuccess={() =>
-          queryClient.invalidateQueries({ queryKey: ["my-logged-packages"] })
-        }
+        onSuccess={refetch}
       />
     </div>
   );

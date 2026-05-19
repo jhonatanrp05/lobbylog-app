@@ -1,18 +1,18 @@
 import type { User, CreatedCredentials } from "@/lib/types";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button, Skeleton, Table, Toast, useOverlayState } from "@heroui/react";
 import { MdEdit, MdDeleteOutline } from "react-icons/md";
 
 import { RoleChip } from "./components/RoleChip";
 import { CredentialsBanner } from "./components/CredentialsBanner";
 import { UserFormModal } from "./components/UserFormModal";
+
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { getUsersRequest, deleteUserRequest } from "@/services/api";
 
 export default function UsersPage() {
-  const queryClient = useQueryClient();
   const userModalState = useOverlayState();
   const deleteModalState = useOverlayState();
 
@@ -21,7 +21,12 @@ export default function UsersPage() {
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-  const { data: users = [], isLoading, isError } = useQuery<User[]>({
+  const {
+    data: users = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<User[]>({
     queryKey: ["users"],
     queryFn: async () => {
       const data = await getUsersRequest();
@@ -35,7 +40,7 @@ export default function UsersPage() {
   const { mutate: deleteUser } = useMutation({
     mutationFn: (id: string) => deleteUserRequest(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      refetch();
       deleteModalState.close();
       setUserToDelete(null);
       Toast.toast.success("User deleted successfully.");
@@ -120,7 +125,6 @@ export default function UsersPage() {
                           onPress={() => openEditDialog(user)}
                         >
                           <MdEdit />
-                          Edit
                         </Button>
                         <Button
                           isDisabled={user.role === "ADMIN"}
@@ -129,7 +133,6 @@ export default function UsersPage() {
                           onPress={() => openDeleteDialog(user)}
                         >
                           <MdDeleteOutline />
-                          Delete
                         </Button>
                       </div>
                     </Table.Cell>
@@ -146,7 +149,7 @@ export default function UsersPage() {
         user={userToEdit}
         onSuccess={(credentials) => {
           if (credentials) setCreatedCredentials(credentials);
-          queryClient.invalidateQueries({ queryKey: ["users"] });
+          refetch();
         }}
       />
 
