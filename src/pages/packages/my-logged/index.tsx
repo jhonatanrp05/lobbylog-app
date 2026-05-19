@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button, Skeleton, Toast, useOverlayState } from "@heroui/react";
+import { MdEdit } from "react-icons/md";
 
 import { PersonIcon } from "@/components/icons";
 import {
@@ -8,15 +9,16 @@ import {
 } from "@/services/api";
 import { PackageCard, Package } from "@/components/PackageCard";
 
-import { LogPackageModal } from "./components/LogPackageModal";
+import { PackageFormModal } from "./components/PackageFormModal";
 
 export default function MyLoggedPackagesPage() {
-  const createModalState = useOverlayState();
+  const packageModalState = useOverlayState();
 
   const [packages, setPackages] = useState<Package[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [deliveringId, setDeliveringId] = useState<string | null>(null);
+  const [packageToEdit, setPackageToEdit] = useState<Package | null>(null);
 
   async function fetchPackages() {
     setIsLoading(true);
@@ -35,6 +37,16 @@ export default function MyLoggedPackagesPage() {
   useEffect(() => {
     fetchPackages();
   }, []);
+
+  function openCreateDialog() {
+    setPackageToEdit(null);
+    packageModalState.open();
+  }
+
+  function openEditDialog(pkg: Package) {
+    setPackageToEdit(pkg);
+    packageModalState.open();
+  }
 
   async function handleDeliver(packageId: string) {
     setDeliveringId(packageId);
@@ -55,7 +67,7 @@ export default function MyLoggedPackagesPage() {
         <h1 className="text-2xl font-bold text-foreground">
           My Logged Packages
         </h1>
-        <Button onPress={createModalState.open}>Log package</Button>
+        <Button onPress={openCreateDialog}>Log package</Button>
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -85,15 +97,26 @@ export default function MyLoggedPackagesPage() {
               key={pkg.id}
               action={
                 pkg.status === "PENDING" ? (
-                  <Button
-                    className="w-full"
-                    isPending={deliveringId === pkg.id}
-                    size="sm"
-                    variant="outline"
-                    onPress={() => handleDeliver(pkg.id)}
-                  >
-                    Mark as delivered
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      className="w-full"
+                      size="sm"
+                      variant="outline"
+                      onPress={() => openEditDialog(pkg)}
+                    >
+                      <MdEdit />
+                      Edit
+                    </Button>
+                    <Button
+                      className="w-full"
+                      isPending={deliveringId === pkg.id}
+                      size="sm"
+                      variant="outline"
+                      onPress={() => handleDeliver(pkg.id)}
+                    >
+                      Mark as delivered
+                    </Button>
+                  </div>
                 ) : undefined
               }
               meta={
@@ -113,7 +136,11 @@ export default function MyLoggedPackagesPage() {
         </div>
       )}
 
-      <LogPackageModal state={createModalState} onSuccess={fetchPackages} />
+      <PackageFormModal
+        pkg={packageToEdit}
+        state={packageModalState}
+        onSuccess={fetchPackages}
+      />
     </div>
   );
 }

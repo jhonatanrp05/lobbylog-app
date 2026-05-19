@@ -1,4 +1,5 @@
-import type { Resident } from "@/lib/types";
+import type { Resident, Package } from "@/lib/types";
+import type { FieldErrors } from "@/lib/schemas";
 
 import { useState, useEffect, useRef } from "react";
 import {
@@ -14,7 +15,12 @@ import {
   Toast,
 } from "@heroui/react";
 
-import { createPackageRequest, getResidentsRequest } from "@/services/api";
+import {
+  createPackageRequest,
+  updatePackageRequest,
+  getResidentsRequest,
+} from "@/services/api";
+import { packageFormSchema, collectErrors } from "@/lib/schemas";
 import { CameraIcon } from "@/components/icons";
 
 const CLOUDINARY_CLOUD_NAME = import.meta.env
@@ -36,7 +42,7 @@ async function uploadPhoto(file: File): Promise<string> {
   return data.secure_url as string;
 }
 
-type LogPackageModalProps = {
+type PackageFormModalProps = {
   state: {
     isOpen: boolean;
     open: () => void;
@@ -44,17 +50,25 @@ type LogPackageModalProps = {
     setOpen: (value: boolean) => void;
     toggle: () => void;
   };
+  pkg?: Package | null;
   onSuccess: () => void;
 };
 
-export function LogPackageModal({ state, onSuccess }: LogPackageModalProps) {
+export function PackageFormModal({
+  state,
+  pkg,
+  onSuccess,
+}: PackageFormModalProps) {
+  const isEdit = !!pkg;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [description, setDescription] = useState("");
   const [recipientId, setRecipientId] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -72,13 +86,25 @@ export function LogPackageModal({ state, onSuccess }: LogPackageModalProps) {
   }, []);
 
   useEffect(() => {
-    if (!state.isOpen) {
+    if (state.isOpen) {
+      if (pkg) {
+        setDescription(pkg.description);
+        setRecipientId(pkg.recipientId);
+        setExistingPhotoUrl(pkg.photoUrl);
+        setPhotoPreview(pkg.photoUrl);
+        setPhotoFile(null);
+      }
+      setErrors({});
+      setFormError("");
+    } else {
       setDescription("");
       setRecipientId("");
+      setExistingPhotoUrl(null);
+      setErrors({});
       setFormError("");
       removePhoto();
     }
-  }, [state.isOpen]);
+  }, [state.isOpen, pkg]);
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
@@ -92,26 +118,42 @@ export function LogPackageModal({ state, onSuccess }: LogPackageModalProps) {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoFile(null);
     setPhotoPreview(null);
+    setExistingPhotoUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFormError("");
+
+    const result = packageFormSchema.safeParse({ description, recipientId });
+
+    if (!result.success) {
+      setErrors(collectErrors(result.error));
+
+      return;
+    }
+    setErrors({});
     setIsSubmitting(true);
 
     try {
-      let photoUrl: string | undefined;
+      let photoUrl: string | null = existingPhotoUrl;
 
       if (photoFile) {
         photoUrl = await uploadPhoto(photoFile);
       }
 
-      const data = await createPackageRequest({
-        description,
-        recipientId,
-        photoUrl,
-      });
+      const data = pkg
+        ? await updatePackageRequest(pkg.id, {
+            description,
+            recipientId,
+            photoUrl,
+          })
+        : await createPackageRequest({
+            description,
+            recipientId,
+            photoUrl: photoUrl ?? undefined,
+          });
 
       if (data.error) {
         setFormError(data.error);
@@ -121,9 +163,15 @@ export function LogPackageModal({ state, onSuccess }: LogPackageModalProps) {
 
       onSuccess();
       state.close();
-      Toast.toast.success("Package logged successfully.");
+      Toast.toast.success(
+        isEdit
+          ? "Package updated successfully."
+          : "Package logged successfully.",
+      );
     } catch {
-      setFormError("Could not log package.");
+      setFormError(
+        isEdit ? "Could not update package." : "Could not log package.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -135,11 +183,13 @@ export function LogPackageModal({ state, onSuccess }: LogPackageModalProps) {
         <Modal.Container>
           <Modal.Dialog>
             <Modal.Header>
-              <Modal.Heading>Log Package</Modal.Heading>
+              <Modal.Heading>
+                {isEdit ? "Edit Package" : "Log Package"}
+              </Modal.Heading>
               <Modal.CloseTrigger />
             </Modal.Header>
             <Modal.Body>
-              <Form onSubmit={handleSubmit}>
+              <Form validationBehavior="aria" onSubmit={handleSubmit}>
                 <div className="flex flex-col gap-5">
                   <div className="flex flex-col gap-1.5">
                     <span className="text-sm font-medium text-foreground">
@@ -201,18 +251,18 @@ export function LogPackageModal({ state, onSuccess }: LogPackageModalProps) {
                   </div>
 
                   <TextField
-                    isRequired
+                    isInvalid={!!errors.description}
                     name="description"
                     value={description}
                     onChange={setDescription}
                   >
                     <Label>Description</Label>
                     <Input placeholder="e.g. Amazon box" variant="secondary" />
-                    <FieldError />
+                    <FieldError>{errors.description}</FieldError>
                   </TextField>
 
                   <Select
-                    isRequired
+                    isInvalid={!!errors.recipientId}
                     selectedKey={recipientId}
                     onSelectionChange={(key) => setRecipientId(key as string)}
                   >
@@ -221,7 +271,7 @@ export function LogPackageModal({ state, onSuccess }: LogPackageModalProps) {
                       <Select.Value />
                       <Select.Indicator />
                     </Select.Trigger>
-                    <FieldError />
+                    <FieldError>{errors.recipientId}</FieldError>
                     <Select.Popover>
                       <ListBox>
                         {residents.map((r) => (
@@ -243,7 +293,7 @@ export function LogPackageModal({ state, onSuccess }: LogPackageModalProps) {
                     isPending={isSubmitting}
                     type="submit"
                   >
-                    Log package
+                    {isEdit ? "Save changes" : "Log package"}
                   </Button>
                 </div>
               </Form>

@@ -30,6 +30,7 @@ export type Package = {
   createdAt: string;
   deliveredAt: string | null;
   photoUrl: string | null;
+  recipientId: string;
   recipient?: { name: string; unit: string | null };
   porter?: { name: string };
 };
