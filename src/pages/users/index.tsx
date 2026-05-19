@@ -1,48 +1,50 @@
 import type { User, CreatedCredentials } from "@/lib/types";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, Skeleton, Table, Toast, useOverlayState } from "@heroui/react";
 import { MdEdit, MdDeleteOutline } from "react-icons/md";
 
 import { RoleChip } from "./components/RoleChip";
 import { CredentialsBanner } from "./components/CredentialsBanner";
 import { UserFormModal } from "./components/UserFormModal";
-
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { getUsersRequest, deleteUserRequest } from "@/services/api";
 
 export default function UsersPage() {
+  const queryClient = useQueryClient();
   const userModalState = useOverlayState();
   const deleteModalState = useOverlayState();
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
   const [createdCredentials, setCreatedCredentials] =
     useState<CreatedCredentials | null>(null);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-  async function fetchUsers() {
-    try {
+  const { data: users = [], isLoading, isError } = useQuery<User[]>({
+    queryKey: ["users"],
+    queryFn: async () => {
       const data = await getUsersRequest();
 
-      if (!Array.isArray(data)) {
-        setError("Could not load users.");
+      if (!Array.isArray(data)) throw new Error();
 
-        return;
-      }
-      setUsers(data);
-    } catch {
-      setError("Could not load users.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
+      return data;
+    },
+  });
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const { mutate: deleteUser } = useMutation({
+    mutationFn: (id: string) => deleteUserRequest(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      deleteModalState.close();
+      setUserToDelete(null);
+      Toast.toast.success("User deleted successfully.");
+    },
+    onError: () => {
+      Toast.toast.danger("Could not delete user.");
+      deleteModalState.close();
+    },
+  });
 
   function openCreateDialog() {
     setUserToEdit(null);
@@ -59,20 +61,6 @@ export default function UsersPage() {
     deleteModalState.open();
   }
 
-  async function handleDelete() {
-    if (!userToDelete) return;
-    try {
-      await deleteUserRequest(userToDelete.id);
-      setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
-      deleteModalState.close();
-      setUserToDelete(null);
-      Toast.toast.success("User deleted successfully.");
-    } catch {
-      Toast.toast.danger("Could not delete user.");
-      deleteModalState.close();
-    }
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -87,7 +75,7 @@ export default function UsersPage() {
         />
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {isError && <p className="text-sm text-danger">Could not load users.</p>}
 
       {isLoading ? (
         <div className="flex flex-col gap-3">
@@ -158,7 +146,7 @@ export default function UsersPage() {
         user={userToEdit}
         onSuccess={(credentials) => {
           if (credentials) setCreatedCredentials(credentials);
-          fetchUsers();
+          queryClient.invalidateQueries({ queryKey: ["users"] });
         }}
       />
 
@@ -172,7 +160,7 @@ export default function UsersPage() {
         }
         state={deleteModalState}
         title="Delete user"
-        onConfirm={handleDelete}
+        onConfirm={() => userToDelete && deleteUser(userToDelete.id)}
       />
     </div>
   );

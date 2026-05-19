@@ -1,51 +1,43 @@
-import { useState, useEffect } from "react";
-import { Button, Skeleton } from "@heroui/react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button, Skeleton, Toast } from "@heroui/react";
 
 import { TagIcon } from "@/components/icons";
 import { getMyPackagesRequest, confirmPackageRequest } from "@/services/api";
 import { PackageCard, Package } from "@/components/PackageCard";
 
 export default function MyPackagesPage() {
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  async function fetchPackages() {
-    setIsLoading(true);
-    setError("");
-    try {
+  const { data: packages = [], isLoading, isError } = useQuery<Package[]>({
+    queryKey: ["my-packages"],
+    queryFn: async () => {
       const data = await getMyPackagesRequest();
 
-      setPackages(data);
-    } catch {
-      setError("Could not load packages.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
+      if (!Array.isArray(data)) throw new Error();
 
-  useEffect(() => {
-    fetchPackages();
-  }, []);
+      return data;
+    },
+  });
 
-  async function handleConfirm(packageId: string) {
-    setConfirmingId(packageId);
-    try {
-      await confirmPackageRequest(packageId);
-      await fetchPackages();
-    } catch {
-      setError("Could not confirm package.");
-    } finally {
-      setConfirmingId(null);
-    }
-  }
+  const {
+    mutate: confirm,
+    isPending: isConfirming,
+    variables: confirmingId,
+  } = useMutation({
+    mutationFn: (id: string) => confirmPackageRequest(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-packages"] });
+    },
+    onError: () => Toast.toast.danger("Could not confirm package."),
+  });
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold text-foreground">My Packages</h1>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {isError && (
+        <p className="text-sm text-danger">Could not load packages.</p>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -74,10 +66,10 @@ export default function MyPackagesPage() {
                 pkg.status === "DELIVERED" ? (
                   <Button
                     className="w-full"
-                    isPending={confirmingId === pkg.id}
+                    isPending={isConfirming && confirmingId === pkg.id}
                     size="sm"
                     variant="outline"
-                    onPress={() => handleConfirm(pkg.id)}
+                    onPress={() => confirm(pkg.id)}
                   >
                     Confirm reception
                   </Button>

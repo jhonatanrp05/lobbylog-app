@@ -1,7 +1,8 @@
 import type { AdminPackage } from "@/lib/types";
 
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MdDeleteOutline } from "react-icons/md";
-import { useState, useEffect } from "react";
 import { Button, Skeleton, Table, Toast, useOverlayState } from "@heroui/react";
 
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -10,61 +11,47 @@ import { formatDate } from "@/lib/utils";
 import { getPackagesRequest, deletePackageRequest } from "@/services/api";
 
 export default function AllPackagesPage() {
+  const queryClient = useQueryClient();
   const deleteModalState = useOverlayState();
+  const [packageToDelete, setPackageToDelete] = useState<AdminPackage | null>(null);
 
-  const [packages, setPackages] = useState<AdminPackage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [packageToDelete, setPackageToDelete] = useState<AdminPackage | null>(
-    null,
-  );
-
-  async function fetchPackages() {
-    try {
+  const { data: packages = [], isLoading, isError } = useQuery<AdminPackage[]>({
+    queryKey: ["packages"],
+    queryFn: async () => {
       const data = await getPackagesRequest();
 
-      if (!Array.isArray(data)) {
-        setError("Could not load packages.");
+      if (!Array.isArray(data)) throw new Error();
 
-        return;
-      }
+      return data;
+    },
+  });
 
-      setPackages(data);
-    } catch {
-      setError("Could not load packages.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchPackages();
-  }, []);
+  const { mutate: deletePackage } = useMutation({
+    mutationFn: (id: string) => deletePackageRequest(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["packages"] });
+      deleteModalState.close();
+      setPackageToDelete(null);
+      Toast.toast.success("Package deleted successfully.");
+    },
+    onError: () => {
+      Toast.toast.danger("Could not delete package.");
+      deleteModalState.close();
+    },
+  });
 
   function openDeleteDialog(pkg: AdminPackage) {
     setPackageToDelete(pkg);
     deleteModalState.open();
   }
 
-  async function handleDelete() {
-    if (!packageToDelete) return;
-    try {
-      await deletePackageRequest(packageToDelete.id);
-      setPackages((prev) => prev.filter((p) => p.id !== packageToDelete.id));
-      deleteModalState.close();
-      setPackageToDelete(null);
-      Toast.toast.success("Package deleted successfully.");
-    } catch {
-      Toast.toast.danger("Could not delete package.");
-      deleteModalState.close();
-    }
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold text-foreground">All Packages</h1>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {isError && (
+        <p className="text-sm text-danger">Could not load packages.</p>
+      )}
 
       {isLoading ? (
         <div className="flex flex-col gap-3">
@@ -135,7 +122,7 @@ export default function AllPackagesPage() {
         }
         state={deleteModalState}
         title="Delete package"
-        onConfirm={handleDelete}
+        onConfirm={() => packageToDelete && deletePackage(packageToDelete.id)}
       />
     </div>
   );

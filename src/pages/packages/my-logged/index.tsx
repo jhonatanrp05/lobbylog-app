@@ -1,42 +1,41 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, Skeleton, Toast, useOverlayState } from "@heroui/react";
 import { MdEdit } from "react-icons/md";
 
 import { PersonIcon } from "@/components/icons";
-import {
-  getLoggedPackagesRequest,
-  deliverPackageRequest,
-} from "@/services/api";
+import { getLoggedPackagesRequest, deliverPackageRequest } from "@/services/api";
 import { PackageCard, Package } from "@/components/PackageCard";
-
 import { PackageFormModal } from "./components/PackageFormModal";
 
 export default function MyLoggedPackagesPage() {
+  const queryClient = useQueryClient();
   const packageModalState = useOverlayState();
-
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [deliveringId, setDeliveringId] = useState<string | null>(null);
   const [packageToEdit, setPackageToEdit] = useState<Package | null>(null);
 
-  async function fetchPackages() {
-    setIsLoading(true);
-    setError("");
-    try {
+  const { data: packages = [], isLoading, isError } = useQuery<Package[]>({
+    queryKey: ["my-logged-packages"],
+    queryFn: async () => {
       const data = await getLoggedPackagesRequest();
 
-      setPackages(data);
-    } catch {
-      setError("Could not load packages.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
+      if (!Array.isArray(data)) throw new Error();
 
-  useEffect(() => {
-    fetchPackages();
-  }, []);
+      return data;
+    },
+  });
+
+  const {
+    mutate: deliver,
+    isPending: isDelivering,
+    variables: deliveringId,
+  } = useMutation({
+    mutationFn: (id: string) => deliverPackageRequest(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-logged-packages"] });
+      Toast.toast.success("Package marked as delivered.");
+    },
+    onError: () => Toast.toast.danger("Could not mark package as delivered."),
+  });
 
   function openCreateDialog() {
     setPackageToEdit(null);
@@ -48,19 +47,6 @@ export default function MyLoggedPackagesPage() {
     packageModalState.open();
   }
 
-  async function handleDeliver(packageId: string) {
-    setDeliveringId(packageId);
-    try {
-      await deliverPackageRequest(packageId);
-      await fetchPackages();
-      Toast.toast.success("Package marked as delivered.");
-    } catch {
-      Toast.toast.danger("Could not mark package as delivered.");
-    } finally {
-      setDeliveringId(null);
-    }
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -70,7 +56,9 @@ export default function MyLoggedPackagesPage() {
         <Button onPress={openCreateDialog}>Log package</Button>
       </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {isError && (
+        <p className="text-sm text-danger">Could not load packages.</p>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -109,10 +97,10 @@ export default function MyLoggedPackagesPage() {
                     </Button>
                     <Button
                       className="w-full"
-                      isPending={deliveringId === pkg.id}
+                      isPending={isDelivering && deliveringId === pkg.id}
                       size="sm"
                       variant="outline"
-                      onPress={() => handleDeliver(pkg.id)}
+                      onPress={() => deliver(pkg.id)}
                     >
                       Mark as delivered
                     </Button>
@@ -139,7 +127,9 @@ export default function MyLoggedPackagesPage() {
       <PackageFormModal
         pkg={packageToEdit}
         state={packageModalState}
-        onSuccess={fetchPackages}
+        onSuccess={() =>
+          queryClient.invalidateQueries({ queryKey: ["my-logged-packages"] })
+        }
       />
     </div>
   );
