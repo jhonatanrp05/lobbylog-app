@@ -1,3 +1,5 @@
+import type { FieldErrors } from "@/lib/schemas";
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -13,11 +15,13 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { loginRequest } from "@/services/api";
+import { loginSchema, collectErrors } from "@/lib/schemas";
 import { SunIcon, MoonIcon } from "@/components/icons";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState("");
   const [isPending, setIsPending] = useState(false);
 
@@ -31,6 +35,15 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setServerError("");
+
+    const result = loginSchema.safeParse({ email, password });
+
+    if (!result.success) {
+      setErrors(collectErrors(result.error));
+
+      return;
+    }
+    setErrors({});
     setIsPending(true);
 
     try {
@@ -99,11 +112,11 @@ export default function LoginPage() {
             </div>
           </Card.Header>
 
-          <Form onSubmit={handleSubmit}>
+          <Form validationBehavior="aria" onSubmit={handleSubmit}>
             <Card.Content className="pt-6 sm:pt-8">
               <div className="flex flex-col gap-5 sm:gap-6">
                 <TextField
-                  isRequired
+                  isInvalid={!!errors.email}
                   name="email"
                   type="email"
                   value={email}
@@ -115,11 +128,11 @@ export default function LoginPage() {
                     placeholder="name@example.com"
                     variant="secondary"
                   />
-                  <FieldError />
+                  <FieldError>{errors.email}</FieldError>
                 </TextField>
 
                 <TextField
-                  isRequired
+                  isInvalid={!!errors.password}
                   name="password"
                   type="password"
                   value={password}
@@ -131,7 +144,7 @@ export default function LoginPage() {
                     placeholder="Your password"
                     variant="secondary"
                   />
-                  <FieldError />
+                  <FieldError>{errors.password}</FieldError>
                 </TextField>
 
                 {serverError && (
